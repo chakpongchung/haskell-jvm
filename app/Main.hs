@@ -3,24 +3,24 @@ import Cmd
 import Classpath.ClassPath
 import Options.Applicative
 import Data.Semigroup ((<>))
+import Data.Maybe
 
 main :: IO ()
-main = parse =<< execParser opts
+main = dispatch =<< execParser opts
  where
-     opts = info ( cmd <**> helper) ( fullDesc <> progDesc "a JVM implements by Haskell" <> header "---------使用说明---------" )
-parse :: Cmd -> IO ()
-parse c = case c of 
-    Cmd cp xj ca arg -> putStrLn cp
+     opts = info (cmdParser <**> version <**> helper) ( fullDesc <> progDesc "a JVM implements by Haskell" <> header "---------使用说明---------" )
 
--- dispatch :: Cmd -> IO()
--- dispatch c
---   | version c = putStrLn printVersion
---   | help c = putStrLn printHelp
---   | otherwise = startJVM c
+dispatch :: Cmd -> IO ()
+dispatch c = 
+    case args c of 
+        ("":xs) -> error "MainClass缺失"
+        _       -> startJVM c
 
-
--- startJVM :: Cmd -> IO()
--- startJVM cmd = print cmd
+startJVM :: Cmd -> IO()
+startJVM c = do
+    putStrLn . show $ c
+    putStrLn "开始启动JVM..."
+    return ()
 
 {-
   解析类路径
