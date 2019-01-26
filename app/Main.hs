@@ -1,5 +1,5 @@
 import System.Environment
-import Cmd
+import CommandLine
 import Classpath.ClassPath
 import Options.Applicative
 import Data.Semigroup ((<>))
@@ -8,25 +8,19 @@ import Data.Maybe
 main :: IO ()
 main = dispatch =<< execParser opts
  where
-     opts = info (cmdParser <**> version <**> helper) ( fullDesc <> progDesc "a JVM implements by Haskell" <> header "---------使用说明---------" )
+     opts = info (commandParser <**> helper) ( fullDesc <> progDesc "a JVM implements by Haskell" <> header "---------使用说明---------" )
 
-dispatch :: Cmd -> IO ()
+dispatch :: CommandLine -> IO ()
 dispatch c = 
     case args c of 
-        ("":xs) -> error "MainClass缺失"
+        ("":xs) -> error "missing main class, e.g: java.lang.Object"
         _       -> startJVM c
 
-startJVM :: Cmd -> IO()
+startJVM :: CommandLine -> IO()
 startJVM c = do
     putStrLn . show $ c
-    putStrLn "开始启动JVM..."
+    putStrLn "start haskell-jvm..."
+    classPath <- makeClassPath c
+    putStrLn .show $ classPath
+    readClass classPath . getMainClass $ args c
     return ()
-
-{-
-  解析类路径
-  ClassPath.parse(cmd.jre,cmd.cp)
-  读取class文件
-  data = ClassPath.readClass(cmd.clazz)
-  输出文件数据
-  print data
--}
