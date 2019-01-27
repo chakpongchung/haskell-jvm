@@ -11,6 +11,10 @@ import Data.Maybe
 import GHC.IO
 import System.Directory
 import System.Environment
+import Control.Monad.Trans.Maybe
+import Control.Monad.Trans.Class
+import Control.Monad
+import Control.Applicative
 
 data ClassPath = ClassPath {
  boot :: !Entry,
@@ -31,16 +35,13 @@ javaHomeEnv = "JAVA_HOME"
 
 makeClassPath :: CommandLine -> IO ClassPath
 makeClassPath cmd = do
-    currentAbsJre <- findJrePathByCurrentDir
-    javaHome <- findJrePathByJavaHome
 
-    let makeJrePath = fromMaybe (error "not't found jre path!") . getFirst 
-            $ findJrePathByJreOption 
-            `mappend` First currentAbsJre
-            `mappend` First ((++) <$> javaHome <*> Just "jre")
+    maybeJrePath <- runMaybeT $ findJreByJreOption cmd <|> findJreByCurrentDir <|> findJreByJavaHome
+    
+    let jrePath = fromMaybe (error "not't found jre path!") maybeJrePath
 
-    bootStrapPath <- absPath $ makeJrePath ++ "/lib"
-    extensionPath <- absPath $ makeJrePath ++ "/lib/ext"
+    bootStrapPath <- absPath $ jrePath ++ "/lib"
+    extensionPath <- absPath $ jrePath ++ "/lib/ext"
 
     bootEntry <- newWildcardEntry bootStrapPath
     extEntry <- newWildcardEntry extensionPath
@@ -51,29 +52,29 @@ makeClassPath cmd = do
         ext = extEntry,
         user = cpEntry
     } 
-    where 
-        findJrePathByJreOption = First $ jre cmd
-
-        findJrePathByCurrentDir = do
-            checkJre <- canonicalizePath currentJrePath
-            exist <- doesPathExist checkJre
-            if exist then return (Just currentJrePath) else return Nothing
-
-        findJrePathByJavaHome = lookupEnv javaHomeEnv
-                    
+    where                     
         findClassPath = fromMaybe currentClassPath $ classpath cmd 
               
-        
+findJreByJreOption :: CommandLine -> MaybeT IO String 
+findJreByJreOption cmd = MaybeT (return $ jre cmd)
+
+findJreByCurrentDir :: MaybeT IO String
+findJreByCurrentDir = do
+    checkJre <- lift $ canonicalizePath currentJrePath
+    exist <- lift $ doesPathExist checkJre
+    guard exist
+    return currentJrePath
+
+findJreByJavaHome :: MaybeT IO String
+findJreByJavaHome = do
+    javaHome <- lift $ lookupEnv javaHomeEnv
+    MaybeT (return ((++) <$> javaHome <*> return "jre"))
+
 -- ClassName java.lang.Object
 readClass :: ClassPath -> ClassName -> IO ClassContent
 readClass cp cn = do
-        bootContent <- loadClass (boot cp) cn
-        extContent <- loadClass (ext cp) cn
-        userContent <- loadClass (user cp) cn
-        let content = fromMaybe (error "class not found") . getFirst 
-                $ (First bootContent) 
-                `mappend` (First extContent) 
-                `mappend` (First userContent)
-        putStrLn "---------readClass------------"      
-        putStrLn content
-        return content
+    classContent <- runMaybeT $ loadClass (boot cp) cn <|> loadClass (ext cp) cn <|> loadClass (user cp) cn
+    let content = fromMaybe (error "read class error, class not found") classContent
+    putStrLn "---------readClass------------"      
+    putStrLn content
+    return content

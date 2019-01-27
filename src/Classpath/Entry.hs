@@ -1,3 +1,4 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 module Classpath.Entry(
  Entry(..)
  ,newEntry
@@ -16,6 +17,11 @@ import System.FilePath
 import qualified Control.Exception as E
 import Codec.Archive.Zip
 import qualified Data.Map as M
+import Control.Exception.Base
+import Control.Monad.Trans.Maybe
+import Control.Monad.Trans.Class
+import Control.Monad
+import Control.Applicative
 
 data Entry = 
     DirEntry String | 
@@ -83,19 +89,15 @@ absPath path = do
         then return absPath 
         else error $ "dir [" ++ path ++ "] is not exist"
 
-loadClass :: Entry -> ClassName -> IO (Maybe String)
-loadClass (DirEntry absPath) className =
-    E.bracketOnError
-        (openBinaryFile (fileFullPath absPath className) ReadMode) 
-        (\handler -> do
-            hClose handler
-            return Nothing
-        )
-        (\handler -> do 
-            x <- hGetContents handler
-            hClose handler
-            return $ Just x
-        )
+loadClass :: Entry -> ClassName -> MaybeT IO String
+loadClass (DirEntry absPath) className = 
+    MaybeT $ catch 
+        (do
+            handler <- openBinaryFile (fileFullPath absPath className) ReadMode
+            Just <$> hGetContents handler 
+        ) 
+        (\(e :: SomeException) -> mzero)
+loadClass _ _ = MaybeT $ return Nothing
 -- loadClass (ZipEntry String) className = 
 
 -- loadClass (CompositeEntry [Entry]) ClassName = 

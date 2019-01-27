@@ -2,4 +2,5 @@
 haskell-jvm.cabal
 *.jar
 *.class
+review
 *~

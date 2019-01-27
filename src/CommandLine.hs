@@ -21,8 +21,8 @@ data CommandLine = CommandLine {
 getMainClass :: [String] -> String
 getMainClass [] = error "missing main class..."
 getMainClass (x:xs) = 
-    T.unpack replace ++ ".class"
-    where replace = T.replace (T.pack ".") (T.pack "/") (T.pack x)
+    replace ++ ".class"
+    where replace = map (\c -> if c == '.' then '/' else c) x
 
 getMainClassParam :: [String] -> [String]
 getMainClassParam  = tail

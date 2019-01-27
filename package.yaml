@@ -28,6 +28,7 @@ dependencies:
 - text == 1.2.3.0
 - zip == 1.0.0
 - containers == 0.5.10.2
+- transformers == 0.5.5.0
 
 
 library:
