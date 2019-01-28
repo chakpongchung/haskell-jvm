@@ -4,7 +4,7 @@ module Classpath.ClassPath(
  ,readClass
 ) where
 
-import Classpath.Entry
+import Classpath.ClassEntry
 import CommandLine
 import Data.Monoid
 import Data.Maybe
@@ -17,9 +17,9 @@ import Control.Monad
 import Control.Applicative
 
 data ClassPath = ClassPath {
- boot :: !Entry,
- ext :: !Entry,
- user :: !Entry
+ boot :: !ClassEntry,
+ ext :: !ClassEntry,
+ user :: !ClassEntry
 } deriving (Show)
 
 
@@ -43,9 +43,13 @@ makeClassPath cmd = do
     bootStrapPath <- absPath $ jrePath ++ "/lib"
     extensionPath <- absPath $ jrePath ++ "/lib/ext"
 
+    print $ "bootStrapPath: " ++ bootStrapPath
+    print $ "extensionPath: " ++ extensionPath
+    print $ "userClassPath: " ++ findClassPath
+
     bootEntry <- newWildcardEntry bootStrapPath
     extEntry <- newWildcardEntry extensionPath
-    cpEntry <- newEntry findClassPath
+    cpEntry <- newClassEntry findClassPath
 
     return $! ClassPath {
         boot = bootEntry, 
@@ -70,11 +74,12 @@ findJreByJavaHome = do
     javaHome <- lift $ lookupEnv javaHomeEnv
     MaybeT (return ((++) <$> javaHome <*> return "jre"))
 
--- ClassName java.lang.Object
+-- ClassName: java.lang.Object -> java/lang/Object.class
 readClass :: ClassPath -> ClassName -> IO ClassContent
 readClass cp cn = do
     classContent <- runMaybeT $ loadClass (boot cp) cn <|> loadClass (ext cp) cn <|> loadClass (user cp) cn
-    let content = fromMaybe (error "read class error, class not found") classContent
+    let errMsg = "read class error, class["++cn++"] not found"
+    let content = fromMaybe (error errMsg) classContent
     putStrLn "---------readClass------------"      
-    putStrLn content
+    print content
     return content

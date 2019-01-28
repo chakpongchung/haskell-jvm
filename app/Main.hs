@@ -11,16 +11,16 @@ main = dispatch =<< execParser opts
      opts = info (commandParser <**> helper) ( fullDesc <> progDesc "a JVM implements by Haskell" <> header "---------使用说明---------" )
 
 dispatch :: CommandLine -> IO ()
-dispatch c = 
-    case args c of 
+dispatch c =
+    case args c of
         ("":xs) -> error "missing main class, e.g: java.lang.Object"
         _       -> startJVM c
 
 startJVM :: CommandLine -> IO()
 startJVM c = do
-    putStrLn . show $ c
+    print c
     putStrLn "start haskell-jvm..."
     classPath <- makeClassPath c
-    putStrLn .show $ classPath
+    print classPath
     readClass classPath . getMainClass $ args c
     return ()
