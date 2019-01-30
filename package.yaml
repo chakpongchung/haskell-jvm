@@ -30,6 +30,9 @@ dependencies:
 - containers == 0.5.10.2
 - transformers == 0.5.5.0
 - zip-archive == 0.4
+- mtl == 2.2.2
+- binary == 0.10.0.0
+- binary-strict >= 0.4.8.1
 
 
 library:

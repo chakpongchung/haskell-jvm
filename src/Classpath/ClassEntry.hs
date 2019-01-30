@@ -4,12 +4,11 @@ module Classpath.ClassEntry(
  ,newClassEntry
  ,newWildcardEntry
  ,absPath
- ,ClassName
- ,ClassContent
  ,loadClass
 ) where
 
 import Data.List
+import Common
 import GHC.IO
 import System.IO
 import System.Directory
@@ -33,9 +32,6 @@ data ClassEntry =
 
 wild :: String
 wild = "*"
-
-type ClassName = String
-type ClassContent = L.ByteString
 
 zipJarList :: [String]
 zipJarList = ["zip","ZIP"] ++ jarSuffix

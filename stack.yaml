@@ -38,7 +38,8 @@ packages:
 # Dependency packages to be pulled from upstream that are not in the resolver
 # using the same syntax as the packages field.
 # (e.g., acme-missiles-0.3)
-extra-deps: []
+extra-deps: 
+  - binary-strict-0.4.8.3
 # - transformers-0.5.5.0
 
 
@@ -58,6 +59,7 @@ extra-deps: []
 # Override the architecture used by stack, especially useful on Windows
 # arch: i386
 # arch: x86_64
+
 #
 # Extra directories used by stack for building
 # extra-include-dirs: [/path/to/dir]

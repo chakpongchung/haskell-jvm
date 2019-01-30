@@ -3,6 +3,7 @@
 haskell-jvm.cabal
 *.jar
 *.class
+*.java
 *.zip
 review
 JVM

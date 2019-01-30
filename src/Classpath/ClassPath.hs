@@ -6,6 +6,7 @@ module Classpath.ClassPath(
 
 import Classpath.ClassEntry
 import CommandLine
+import Common
 import Data.Monoid
 import Data.Maybe
 import GHC.IO
@@ -14,15 +15,15 @@ import System.Environment
 import Control.Monad.Trans.Maybe
 import Control.Monad.Trans.Class
 import Control.Monad
+import Data.Word
 import Control.Applicative
+import qualified Data.ByteString.Lazy as L
 
 data ClassPath = ClassPath {
  boot :: !ClassEntry,
  ext :: !ClassEntry,
  user :: !ClassEntry
 } deriving (Show)
-
-
 
 currentJrePath :: String
 currentJrePath = "./jre"
@@ -75,11 +76,13 @@ findJreByJavaHome = do
     MaybeT (return ((++) <$> javaHome <*> return "jre"))
 
 -- ClassName: java.lang.Object -> java/lang/Object.class
-readClass :: ClassPath -> ClassName -> IO ClassContent
+readClass :: ClassPath -> ClassName -> IO L.ByteString
 readClass cp cn = do
     classContent <- runMaybeT $ loadClass (boot cp) cn <|> loadClass (ext cp) cn <|> loadClass (user cp) cn
     let errMsg = "read class error, class["++cn++"] not found"
     let content = fromMaybe (error errMsg) classContent
     putStrLn "---------readClass------------"      
     print content
+    print $ L.unpack $ content
+    -- return . L.unpack $ content
     return content
