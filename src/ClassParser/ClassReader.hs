@@ -7,6 +7,8 @@ module ClassParser.ClassReader(
 
 import Common
 import ClassParser.ConstantPool
+import ClassParser.ClassMember
+import ClassParser.ClassAttributes
 import Data.List
 import Data.Word
 import qualified Data.ByteString as L
@@ -31,13 +33,8 @@ data ClassFile = ClassFile {
     interfaces :: [Word16],
     fields     ::  [MemberInfo],
     methods    :: [MemberInfo],
-    attributes :: [AttributeInfo]
+    classAttributes :: [AttributeInfo]
 }
-
-
-data MemberInfo = MemberInfo
-
-data AttributeInfo = AttributeInfo
 
 type ByteNum = Int
 
@@ -54,53 +51,44 @@ checkJvmVersion minor major
     | major == 45  = True
     | major `elem` [46..52] && 0 == minor = True
     | otherwise    = error "java.lang.UnsupportedClassVersionError!"
-     
-
-
-readWord16 :: Int ->  Get [Word16]
-readWord16 0 = return []
-readWord16 n = do
-   x <- getWord16be
-   y <- readWord16 (n-1)
-   return (x:y)
-
--- readConstantPool :: Int -> Get [Word16]
--- readConstantPool 0 = return []
--- readConstantPool n = do
---     tag <- getWord8be
 
 
 
 check :: Word16 -> Bool
 check n 
-    | n == 0 = error (show $ fromEnum n)
-    | otherwise =  error (show $ fromEnum n)
+    | n == 0 = error ("nnnn" ++ (show $ fromEnum n))
+    | otherwise =  error ("dddd" ++ (show $ fromEnum n))
 
-parserClass :: Get [Word16]
+parserClass :: Get [AttributeInfo]
 parserClass = do
 
+    -- read magic
     magic <- getWord32be
     guard $ checkJvmMagic magic
 
+    -- read version
     minor <- getWord16be
     major <- getWord16be
     guard $ checkJvmVersion minor major
-    
-    cn <- getWord16be
-    p <- readWord16 $ fromEnum cn
 
-    -- guard $ check cn
+    -- read ConstantPool
+    cp <- readConstantPool
 
-    -- accessFlags <- getWord16be
-    -- thisClass <- getWord16be
-    -- superClass <- getWord16be
+    accessFlags <- getWord16be
+    thisClass <- getWord16be
+    superClass <- getWord16be
 
-    -- num <- getWord16be
-    -- guard $ check num
-    -- interfaces <- readWord16 n
+    -- read interfaces
+    num <- getWord16be
+    interfaces <- readWord16s $ fromEnum num
 
-
-    return p
+    -- read fields
+    fields <- readMemberInfo cp
+    -- read methods
+    methods <- readMemberInfo cp
+    -- -- read attributes
+    attributes <- readAttributes cp
+    return attributes
     --    return $! ClassFile {
 --         magic = magic,
 --         minorVersion = "",
@@ -112,6 +100,6 @@ parserClass = do
 --         interfaces = [Word16],
 --         fields = [MemberInfo],
 --         methods = [MemberInfo],
---         attributes = ""
+--         classAttributes = ""
    
 --    }
