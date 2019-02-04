@@ -33,6 +33,8 @@ dependencies:
 - mtl == 2.2.2
 - binary == 0.10.0.0
 - binary-strict >= 0.4.8.1
+- string-conversions == 0.4.0.1
+- QuickCheck == 2.12.6.1
 
 
 library:

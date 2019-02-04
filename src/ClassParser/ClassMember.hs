@@ -11,16 +11,18 @@ import Control.Monad
 import Data.Binary.Get
 
 data MemberInfo = MemberInfo {
-    accessFlags :: Word16,
+    mAccessFlags :: Word16,
     memNameIndex :: PoolIndex,
     memDescIndex :: PoolIndex,
+    memName :: String,
+    memDesc :: String,
     memberAttributes :: [AttributeInfo]
 } deriving (Show)
 
 check :: Word16 -> Bool
 check n 
-    | n == 0 = error $ "first: " ++ (show $ fromEnum n)
-    | otherwise =  error $ "second: " ++ (show $ fromEnum n)
+    | n == 0 = error $ "first: " ++ show (fromEnum n)
+    | otherwise =  error $ "second: " ++ show (fromEnum n)
 
 tag :: MemberInfo -> Bool
 tag m
@@ -50,11 +52,14 @@ newMemberInfo pool = do
    descIndex <- getWord16be
    -- read attribute
    attributes <- readAttributes pool
-
+   let memName = getUtf8 nameIndex pool
+   let memDesc = getUtf8 descIndex pool
    return $ MemberInfo {
-        accessFlags = accessFlags,
+        mAccessFlags = accessFlags,
         memNameIndex = nameIndex,
         memDescIndex = descIndex,
+        memName = memName,
+        memDesc = memDesc,
         memberAttributes = attributes
    }
 

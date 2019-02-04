@@ -1,5 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables #-}
-module Classpath.ClassEntry(
+module ClassPath.ClassEntry(
  ClassEntry(..)
  ,newClassEntry
  ,newWildcardEntry

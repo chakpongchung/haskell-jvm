@@ -1,7 +1,8 @@
 import System.Environment
-import CommandLine
+import ClassPath.CommandLine
 import Common
-import Classpath.ClassPath
+import ClassPath.ClassPath
+import ClassParser.ClassMember
 import ClassParser.ClassReader
 import Options.Applicative
 import Data.Semigroup ((<>))
@@ -10,6 +11,8 @@ import qualified Control.Monad.Trans.State as S
 import Control.Monad.Trans.Maybe
 import Control.Monad.Trans.Class
 import Data.Binary.Get
+import Runtime.Thread.JvmThread
+import Control.Monad.State.Lazy
 
 main :: IO ()
 main = dispatch =<< execParser opts
@@ -30,7 +33,29 @@ startJVM c = do
     -- print classPath
     classContent <- readClass classPath . getMainClass $ args c
 
-    print "----------------------"
-    print $ runGet parserClass classContent
+    print "--------------Start Parser ClassFile-------------"
+    let classFile = runGet parserClass classContent
+    print "--------------Print Parser ClassFile--------------"
+    printClassFile classFile
+    let thread = newJvmThread 4
+    print "============================="
+    runStateT testThread thread >> return ()
+    return ()
+
+printClassFile :: ClassFile -> IO ()
+printClassFile cf = do
+    print cf
+    putStrLn $ "version: " ++ show (majorVersion cf) ++ "." ++ show (minorVersion cf)
+    putStrLn $ "constants count: " ++ show (length $ constantPool cf)
+    putStrLn $ "access flags: " ++ show (accessFlags cf)
+    putStrLn $ "this class: " ++ show (thisClassName cf)
+    putStrLn $ "super class: " ++ show (superClassName cf)
+    putStrLn $ "interfaces: " ++ show (interfaces cf)
+    putStrLn $ "interfaceName: " ++ show (interNames cf)
+    putStrLn $ "fileds count:" ++ show (length $ fields cf)
+    mapM_ (\m -> putStrLn $ "\t" ++ memName m) $ fields cf
+
+    putStrLn $ "methods count:" ++ show (length $ methods cf)
+    mapM_ (\m -> putStrLn $ "\t" ++ memName m) $ methods cf
 
     return ()

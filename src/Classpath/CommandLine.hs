@@ -1,4 +1,4 @@
-module CommandLine
+module ClassPath.CommandLine
 (
 CommandLine(..)
 ,commandParser

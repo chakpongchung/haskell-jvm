@@ -53,21 +53,13 @@ readAttributes :: ConstantPool -> Get [AttributeInfo]
 readAttributes pool = do
     attrCount <- getWord16be
     newAttributeInfo' pool $ fromEnum attrCount
- 
 
-check :: Word16 -> Int -> String -> Word32-> Bool
-check n c m s
-    | m == "\"ConstantValue\"" = True
-    | otherwise =  error $ "second: " ++ (show $ fromEnum n) ++ "----" ++ show  c ++ ": " ++ m ++ "=======" ++ (show $ fromEnum s)
-    
 newAttributeInfo' :: ConstantPool -> AttributeCount -> Get [AttributeInfo]
 newAttributeInfo' _ 0 = return []
 newAttributeInfo' pool n = do
     attrNameIndex <- getWord16be
     -- 获取属性名称
-    
     let attrName = getUtf8 attrNameIndex pool 
-    
     attrLens <- getWord32be
     -- guard $ check attrNameIndex n attrName attrLens
     x <- newAttributeInfo pool attrName attrLens
@@ -103,15 +95,9 @@ readLocalVariableTableEntry n = do
     next <- readLocalVariableTableEntry $ n - 1
     return $ LocalVariableTableEntry { startPc = startPc,length = length,nameIndex = nameIndex, descIndex = descIndex, index = index} : next
 
-sy :: AttributeName -> AttributeLens -> Bool
-sy n c 
-    | n == "d" = True
-    | otherwise = error $ "~~~~~~~~" ++ n ++ "~~~~~~~~" ++ (show $ fromEnum c)
-
-
 newAttributeInfo :: ConstantPool -> AttributeName -> AttributeLens -> Get AttributeInfo
 newAttributeInfo pool name len
-    | name == "\"Code\""  =  do
+    | name == "Code"  =  do
         maxStack <- getWord16be
         maxLocals <- getWord16be
         -- read code
@@ -124,29 +110,35 @@ newAttributeInfo pool name len
         attrCount <- getWord16be
         attributes <- newAttributeInfo' pool $ fromEnum attrCount
         return $ CodeAttribute {maxStack = maxStack,maxLocals = maxLocals,code = code,exceptionTable = exceptionTable,attributes = attributes}
-    | name == "\"ConstantValue\"" =  ConstantValueAttribute <$> getWord16be
-    | name == "\"Deprecated\""  = return DeprecatedAttribute
-    | name == "\"Synthetic\""   =  return SyntheticAttribute
-    | name == "\"Exceptions\""  = do
+    | name == "ConstantValue" =  ConstantValueAttribute <$> getWord16be
+    | name == "Deprecated"  = return DeprecatedAttribute
+    | name == "Synthetic"   =  return SyntheticAttribute
+    | name == "Exceptions"  = do
             exceptionNum <- getWord16be
             rs <- readWord16s $ fromEnum exceptionNum
             return $ ExceptionsAttribute rs
-    | name == "\"LineNumberTable\"" = do
+    | name == "LineNumberTable" = do
         lineNumberTableNum <- getWord16be
         entry <- readLineNumberTableEntry $ fromEnum lineNumberTableNum
         return $ LineNumberTableAttribute entry 
-    | name == "\"LocalVariableTable\""  = do
+    | name == "LocalVariableTable"  = do
         localVariableTableNum <- getWord16be
         entry <- readLocalVariableTableEntry $ fromEnum localVariableTableNum 
         return $ LocalVariableTableAttribute entry
-    | name == "\"SourceFile\""  =  SourceFileAttribute <$> getWord16be
+    | name == "SourceFile"  =  SourceFileAttribute <$> getWord16be
     
     | otherwise = do
-        guard (sy name len)
+        -- guard (unKnow name len)
         info <- getByteString $ fromEnum len
         return $ UnParserAttributeInfo {aName = name,aLen = len,info = info}
-    -- | otherwise = do
-    --     info <- getByteString $ fromEnum len
 
-    --     return $ UnParserAttributeInfo {aName = name,aLen = len,info = info}
+unKnow :: AttributeName -> AttributeLens -> Bool
+unKnow n c 
+    | n == "d" = True
+    | otherwise = error $ "~~~~~~~~" ++ n ++ "~~~~~~~~" ++ (show $ fromEnum c)
 
+check :: Word16 -> Int -> String -> Word32-> Bool
+check n c m s
+    | m == "\"ConstantValue\"" = True
+    | otherwise =  error $ "second: " ++ (show $ fromEnum n) ++ "----" ++ show  c ++ ": " ++ m ++ "=======" ++ (show $ fromEnum s)
+    

@@ -4,6 +4,7 @@ module ClassParser.ConstantPool (
     ,ConstantPool
     ,Tag
     ,getUtf8
+    ,getInterfaceName
 ) where
 
 import Data.Binary.Get
@@ -12,6 +13,8 @@ import Common
 import Data.Int
 import qualified Data.ByteString as L
 import qualified Data.ByteString.Lazy.Char8 as C
+import Data.String.Conversions
+import Control.Monad
 
 type ConstantPool = [ConstantInfo]
 type Tag = Word8
@@ -77,9 +80,6 @@ constantMethodType = 16
 constantInvokeDynamic :: Tag
 constantInvokeDynamic = 18
 
-zero ::Tag
-zero = 0
-
 newConstantInfo :: Int -> Tag -> Get ConstantInfo
 newConstantInfo n tag
     | constantClass == tag  =  ConstantClassInfo <$> getWord16be
@@ -95,11 +95,12 @@ newConstantInfo n tag
     | constantUtf8 == tag  = do
         num <- getWord16be
         bt <- getByteString $ fromEnum num
-        return $ ConstantUtf8Info $ show bt
+        -- guard $ test bt
+        return $ ConstantUtf8Info $ "" ++ (cs bt :: String) ++ ""
     | constantMethodHandler == tag  = ConstantMethodHandler <$> getWord8 <*> getWord16be
     | constantMethodType == tag  = ConstantMethodType <$> getWord16be
     | constantInvokeDynamic == tag  = ConstantInvokeDynamic <$> getWord16be <*> getWord16be
-    | otherwise = error $ "java.lang.ClassFormatError: constant pool tag!" ++ (show tag) ++ "-----" ++ (show n)
+    | otherwise = error $ "java.lang.ClassFormatError: constant pool tag!" ++ show tag ++ "-----" ++ show n
 
 readConstantPool :: Get ConstantPool
 readConstantPool = do
@@ -111,10 +112,9 @@ newConstantPool 1 = return []
 newConstantPool n = do
     tag <- getWord8
     x <- newConstantInfo n tag
-    -- todo 
     let size = skipBytes tag
-    y <- newConstantPool $ (n-) $ size
-    let r = if size == 1 then  x : y else x : (padding tag) : y
+    y <- newConstantPool $ n - size
+    let r = if size == 1 then  x : y else x : padding tag : y
     return r
 
 skipBytes :: Tag -> Int
@@ -123,6 +123,8 @@ skipBytes t
     | t == constantDouble = 2
     | otherwise = 1
 
+-- Long/Double need 2 bytes，use for 1 bytes
+-- TODO need better implementation
 padding :: Tag -> ConstantInfo
 padding t
     | t == constantLong = ConstantLongInfo 0
@@ -132,15 +134,26 @@ getUtf8 :: PoolIndex -> ConstantPool -> String
 getUtf8 i c = 
     case constantInfo of
         ConstantUtf8Info str -> str
+        -- read (this/super)class name
+        ConstantClassInfo nameIndex -> getUtf8 nameIndex c
         _  -> error "type error, index: " ++ show i ++ show constantInfo
     where 
         constantInfo = getConstantInfo i c
 
 getConstantInfo :: PoolIndex -> ConstantPool -> ConstantInfo
 getConstantInfo i c = 
-    if index >= len 
-        then error ("invalid constant index : " ++ (show index) ++ ", pool size: " ++ (show len))
+    if index >= clen 
+        then error ("invalid constant index : " ++ show index ++ ", pool size: " ++ show clen)
         else c !! (index - 1)
     where 
-        len = length c
+        clen = length c
         index = fromEnum i
+
+getInterfaceName :: ConstantPool -> [Word16] -> [String]
+getInterfaceName c [] = []
+getInterfaceName c xs = map (`getUtf8` c) xs
+
+test :: L.ByteString -> Bool
+test c 
+    | True = error $ (cs c :: String)
+    |otherwise = error $ (cs c :: String)

@@ -1,11 +1,11 @@
-module Classpath.ClassPath(
+module ClassPath.ClassPath(
  ClassPath
  ,makeClassPath
  ,readClass
 ) where
 
-import Classpath.ClassEntry
-import CommandLine
+import ClassPath.ClassEntry
+import ClassPath.CommandLine
 import Common
 import Data.Monoid
 import Data.Maybe
@@ -73,6 +73,7 @@ findJreByCurrentDir = do
 findJreByJavaHome :: MaybeT IO String
 findJreByJavaHome = do
     javaHome <- lift $ lookupEnv javaHomeEnv
+    -- join $JAVA_HOME and "jre"
     MaybeT (return ((++) <$> javaHome <*> return "jre"))
 
 -- ClassName: java.lang.Object -> java/lang/Object.class
@@ -82,7 +83,6 @@ readClass cp cn = do
     let errMsg = "read class error, class["++cn++"] not found"
     let content = fromMaybe (error errMsg) classContent
     putStrLn "---------readClass------------"      
-    print content
-    print $ L.unpack $ content
-    -- return . L.unpack $ content
+    -- print content
+    -- print $ L.unpack content
     return content
