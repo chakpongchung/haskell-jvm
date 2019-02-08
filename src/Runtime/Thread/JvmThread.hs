@@ -1,12 +1,15 @@
 module Runtime.Thread.JvmThread(
     newJvmThread,
     newStackFrame,
-    testThread
+    testThread,
+    StackFrame(..)
 ) where
 
 import Control.Monad.State.Lazy
 import Runtime.Thread.LocalVariableTable
 import Runtime.Thread.OperandStack
+import Data.Array.ST
+import Data.Int
 
 type StackSize = Word
 
@@ -33,11 +36,11 @@ newJvmThread s = JvmThread { pc = 0,stack = newJvmStack s }
 newJvmStack :: StackSize -> JvmStack
 newJvmStack s = JvmStack {maxSize = s,size = 0,top = RootStackFrame}
 
-newStackFrame :: StackFrame
-newStackFrame = StackFrame {
+newStackFrame :: Int -> Int -> StackFrame
+newStackFrame t s = StackFrame {
     nextNode = RootStackFrame,
-    localVariableTable = LocalVariableTable,
-    operandStack = OperandStack
+    localVariableTable = newLocalVariableTable t,
+    operandStack = newOperandStack s
 }
 
 checkStackFull :: JvmStack -> Bool
@@ -71,13 +74,13 @@ popStackFrame = do
 
 testThread :: StateT JvmThread IO ()
 testThread = do
-    pushStackFrame newStackFrame
+    pushStackFrame $ newStackFrame 3 4
     c1 <- get
     lift $ print c1
-    pushStackFrame newStackFrame
+    pushStackFrame $ newStackFrame 3 4
     c2 <- get
     lift $ print c2
-    pushStackFrame newStackFrame
+    pushStackFrame $ newStackFrame 3 4
     c3 <- get
     lift $ print c3
     popStackFrame 

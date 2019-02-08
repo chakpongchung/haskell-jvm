@@ -35,6 +35,7 @@ dependencies:
 - binary-strict >= 0.4.8.1
 - string-conversions == 0.4.0.1
 - QuickCheck == 2.12.6.1
+- array == 0.5.3.0
 
 
 library:
