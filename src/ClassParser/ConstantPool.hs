@@ -100,7 +100,7 @@ newConstantInfo n tag
     | constantMethodHandler == tag  = ConstantMethodHandler <$> getWord8 <*> getWord16be
     | constantMethodType == tag  = ConstantMethodType <$> getWord16be
     | constantInvokeDynamic == tag  = ConstantInvokeDynamic <$> getWord16be <*> getWord16be
-    | otherwise = error $ "java.lang.ClassFormatError: constant pool tag!" ++ show tag ++ "-----" ++ show n
+    | otherwise = error $ "java.lang.ClassFormatError: constant pool tag：" ++ show tag ++ "-----" ++ show n
 
 readConstantPool :: Get ConstantPool
 readConstantPool = do

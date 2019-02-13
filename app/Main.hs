@@ -11,8 +11,10 @@ import qualified Control.Monad.Trans.State as S
 import Control.Monad.Trans.Maybe
 import Control.Monad.Trans.Class
 import Data.Binary.Get
-import Runtime.Thread.JvmThread
 import Control.Monad.State.Lazy
+import Runtime.Thread.JvmThread
+import Runtime.Thread.JvmStack
+import Runtime.Thread.JvmStackFrame
 import Runtime.Thread.LocalVariableTable
 import Runtime.Thread.OperandStack
 
@@ -43,9 +45,9 @@ startJVM c = do
     print "============================="
     runStateT testThread thread >> return ()
 
-    let stackFrame = newStackFrame 10 10
-    runStateT testLocalVariableTable $ localVariableTable stackFrame
-    runStateT testOperandStack $ operandStack stackFrame
+    let jvmStackFrame = newJvmStackFrame 10 10
+    runStateT testLocalVariableTable jvmStackFrame
+    runStateT testOperandStack jvmStackFrame
     return ()
 
 printClassFile :: ClassFile -> IO ()
@@ -67,19 +69,20 @@ printClassFile cf = do
     return ()
 
 
-testLocalVariableTable :: StateT LocalVariableTable IO ()
+testLocalVariableTable :: StateT JvmStackFrame IO ()
 testLocalVariableTable = do
     lift $ print "---------------------set LocalVariableTable--------------------------"
-    setValue $ TypeInt32 100
-    setValue $ TypeInt32 (-100)
-    setValue $ TypeInt64 2997924580
-    setValue $ TypeInt64 (-2997924580)
-    setValue $ TypeFloat 3.1415926
-    setValue $ TypeDouble 2.71828182845
-    setValue $ TypeReference $ Object{name = "object"}
+    setInt 0 100
+    setInt 1 (-100)
+    setLong 2 2997924580
+    setLong 4 (-2997924580)
+    setFloat 6 3.1415926
+    setDouble 7 2.71828182845
+    setReference 9 Object{name = "object"}
 
-    lvt <- get
-    lift $ print lvt
+    jsf <- get
+    let table = localtable jsf
+    lift $ print table
     lift $ print "---------------------get LocalVariableTable--------------------------"
 
     v0 <- getInt 0
@@ -88,7 +91,7 @@ testLocalVariableTable = do
     v4 <- getLong 4
     v6 <- getFloat 6
     v7 <- getDouble 7
-    v8 <- getReference 8
+    v9 <- getReference 9
 
     lift $ print $ "v0: " ++ show v0
     lift $ print $ "v1: " ++ show v1
@@ -96,10 +99,10 @@ testLocalVariableTable = do
     lift $ print $ "v4: " ++ show v4
     lift $ print $ "v6: " ++ show v6
     lift $ print $ "v7: " ++ show v7
-    lift $ print $ "v8: " ++ show v8 
+    lift $ print $ "v9: " ++ show v9
     return ()
 
-testOperandStack :: StateT OperandStack IO ()
+testOperandStack :: StateT JvmStackFrame IO ()
 testOperandStack = do
     lift $ print "---------------------set OperandStack--------------------------"
     pushInt 100
@@ -110,8 +113,8 @@ testOperandStack = do
     pushDouble 2.71828182845
     pushReference Object{name = "object"}
 
-    os <- get
-    lift $ print os
+    jsf <- get
+    lift $ print jsf
     lift $ print "---------------------get OperandStack--------------------------"
     v1 <- popReference
     v2 <- popDouble

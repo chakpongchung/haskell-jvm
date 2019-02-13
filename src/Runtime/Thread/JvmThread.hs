@@ -1,47 +1,32 @@
 module Runtime.Thread.JvmThread(
     newJvmThread,
-    newStackFrame,
     testThread,
-    StackFrame(..)
+    popJvmStackFrame,
+    pushJvmStackFrame,
+    JvmThread(..)
 ) where
 
 import Control.Monad.State.Lazy
-import Runtime.Thread.LocalVariableTable
+import Runtime.Thread.JvmStack
+import Runtime.Thread.JvmStackFrame
 import Runtime.Thread.OperandStack
+import Runtime.Thread.LocalVariableTable
+
 import Data.Array.ST
 import Data.Int
+import Common
+import Data.Word
 
-type StackSize = Word
 
 data JvmThread = JvmThread {
     pc :: Int,
     stack :: JvmStack
 } deriving (Show)
 
-data JvmStack = JvmStack {
-    maxSize :: Word,
-    size :: Word,
-    top :: StackFrame
-} deriving (Show)
-
-data StackFrame = RootStackFrame | StackFrame {
-    nextNode :: StackFrame,
-    localVariableTable :: LocalVariableTable,
-    operandStack :: OperandStack
-} deriving (Show)
 
 newJvmThread :: StackSize -> JvmThread 
 newJvmThread s = JvmThread { pc = 0,stack = newJvmStack s }
 
-newJvmStack :: StackSize -> JvmStack
-newJvmStack s = JvmStack {maxSize = s,size = 0,top = RootStackFrame}
-
-newStackFrame :: Int -> Int -> StackFrame
-newStackFrame t s = StackFrame {
-    nextNode = RootStackFrame,
-    localVariableTable = newLocalVariableTable t,
-    operandStack = newOperandStack s
-}
 
 checkStackFull :: JvmStack -> Bool
 checkStackFull s 
@@ -53,8 +38,8 @@ checkStackEmpty s
     | size s == 0 = error "JVM Stack is Empty!"
     | otherwise = True
 
-pushStackFrame :: StackFrame -> StateT JvmThread IO ()
-pushStackFrame sf = do
+pushJvmStackFrame :: JvmStackFrame -> StateT JvmThread IO ()
+pushJvmStackFrame sf = do
     thread <- get
     let st = stack thread
     guard $ checkStackFull st
@@ -62,8 +47,8 @@ pushStackFrame sf = do
     let newst = st{size = size st + 1, top = newsf}
     modify (\s -> s {stack = newst})
 
-popStackFrame :: StateT JvmThread IO ()
-popStackFrame = do
+popJvmStackFrame :: StateT JvmThread IO JvmStackFrame
+popJvmStackFrame = do
     thread <- get
     let st = stack thread
     guard $ checkStackEmpty st
@@ -71,26 +56,23 @@ popStackFrame = do
     let ntop = nextNode ctop 
     let newst = st{size = size st - 1, top = ntop}
     modify (\t -> t {stack = newst})
+    return ctop
 
 testThread :: StateT JvmThread IO ()
 testThread = do
-    pushStackFrame $ newStackFrame 3 4
+    pushJvmStackFrame $ newJvmStackFrame 3 4
     c1 <- get
     lift $ print c1
-    pushStackFrame $ newStackFrame 3 4
+    pushJvmStackFrame $ newJvmStackFrame 3 4
     c2 <- get
     lift $ print c2
-    pushStackFrame $ newStackFrame 3 4
+    pushJvmStackFrame $ newJvmStackFrame 3 4
     c3 <- get
     lift $ print c3
-    popStackFrame 
-    popStackFrame 
-    popStackFrame 
-    lift $ print "############"
-    popStackFrame 
+    popJvmStackFrame 
+    popJvmStackFrame 
+    popJvmStackFrame 
+    lift $ print "#####check empty#######"
+    -- popJvmStackFrame 
     return ()
-
-
-
-
 

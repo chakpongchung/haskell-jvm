@@ -3,6 +3,7 @@
 module ClassParser.ClassAttributes(
     readAttributes
     ,AttributeInfo(..)
+    ,findCodeAttribute
 ) where
 
 import Common
@@ -131,6 +132,12 @@ newAttributeInfo pool name len
         -- guard (unKnow name len)
         info <- getByteString $ fromEnum len
         return $ UnParserAttributeInfo {aName = name,aLen = len,info = info}
+
+findCodeAttribute :: [AttributeInfo] -> AttributeInfo
+findCodeAttribute [] = error "not found CodeAttribute"
+findCodeAttribute (x:xs) = case x of 
+                            CodeAttribute {} -> x
+                            _   -> findCodeAttribute xs
 
 unKnow :: AttributeName -> AttributeLens -> Bool
 unKnow n c 

@@ -1,5 +1,14 @@
 module Instructions.BytecodeReader(
-
+    BytecodeReader(..),
+    readUint8,
+    readInt8,
+    readUint16,
+    readInt16,
+    readInt32,
+    readInt32s,
+    skipPadding,
+    readOpCode,
+    OpCode
 ) where
 
 import qualified Data.ByteString as L
@@ -9,16 +18,21 @@ import Data.Bits
 import Data.Int
 
 data BytecodeReader = BytecodeReader {
-    pc :: Int,
-    code :: [Word8]
+    bpc :: Int,
+    bcode :: [Word8]
 }
+
+type OpCode = Word8
+
+readOpCode :: BytecodeReader -> IO OpCode
+readOpCode = evalStateT readUint8
 
 readUint8 :: StateT BytecodeReader IO Word8
 readUint8 = do
    br <- get
-   let codes = code br
-   let i = pc br
-   modify (\o -> o {pc = i + 1})
+   let codes = bcode br
+   let i = bpc br
+   modify (\o -> o {bpc = i + 1})
    return $ codes !! i
 
 readInt8 :: StateT BytecodeReader IO Int8
