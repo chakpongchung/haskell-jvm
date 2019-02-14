@@ -15,16 +15,26 @@ import Data.Binary.IEEE754
 
 type Const = Int32
 
+type PC = Int
+
 checkZero :: (Num n,Eq n,Ord n) => n -> Bool
 checkZero v
     | v == 0 = error "java.lang.ArithmeticException: 不可以除以0"
     | otherwise = True
 
--- todo
-compareValue :: (Num n,Eq n,Ord n) => n -> n -> Int32
-compareValue v1 v2
-    | v1 > v2 = 1
-    | otherwise = 0
+compareLong :: Int64 -> Int64 -> Int32
+compareLong v1 v2
+    | v2 > v1 = 1
+    | v2 == v1 = 0
+    | otherwise = -1
+
+compareFractional :: (Num n,Eq n,Ord n) => n -> n -> Bool -> Int32
+compareFractional f1 f2 flag
+    | f2 > f1 = 1
+    | f2 == f1 = 0
+    | f2 < f1 = -1
+    | flag = 1
+    | otherwise = -1
 
 newInstruction :: OpCode -> StateT BytecodeReader IO Instruction 
 newInstruction op
@@ -221,26 +231,57 @@ newInstruction op
 	| op == 0x96 = return Fcmpg
 	| op == 0x97 = return Dcmpl
 	| op == 0x98 = return Dcmpg
-	| op == 0x99 = return Ifeq              --
-	| op == 0x9a = return Ifne              --
-	| op == 0x9b = return Iflt              --
-	| op == 0x9c = return Ifge              --
-	| op == 0x9d = return Ifgt              --
-	| op == 0x9e = return Ifle              --
-	| op == 0x9f = return If_icmpeq         --
-	| op == 0xa0 = return If_icmpne         --
-	| op == 0xa1 = return If_icmplt         --
-	| op == 0xa2 = return If_icmpge         --
-	| op == 0xa3 = return If_icmpgt         --
-	| op == 0xa4 = return If_icmple         --
-	| op == 0xa5 = return If_acmpeq         --
-    | op == 0xa6 = return If_acmpne         --
+    | op == 0x99 = do
+        v <- readInt16
+        return $ Ifeq (fromIntegral v :: Int)
+    | op == 0x9a = do
+        v <- readInt16
+        return $ Ifne (fromIntegral v :: Int)
+    | op == 0x9b = do
+        v <- readInt16
+        return $ Iflt (fromIntegral v :: Int)
+    | op == 0x9c = do
+        v <- readInt16
+        return $ Ifge (fromIntegral v :: Int)
+    | op == 0x9d = do
+        v <- readInt16
+        return $ Ifgt (fromIntegral v :: Int)
+    | op == 0x9e = do
+        v <- readInt16
+        return $ Ifle (fromIntegral v :: Int)
+    | op == 0x9f = do
+        v <- readInt16
+        return $ If_icmpeq (fromIntegral v :: Int)
+    | op == 0xa0 = do
+        v <- readInt16
+        return $ If_icmpne (fromIntegral v :: Int)
+    | op == 0xa1 = do
+        v <- readInt16
+        return $ If_icmplt (fromIntegral v :: Int)
+    | op == 0xa2 = do
+        v <- readInt16
+        return $ If_icmpge (fromIntegral v :: Int)
+    | op == 0xa3 = do
+        v <- readInt16
+        -- lift $ print $ "read------value: " ++ show v ++ ",v: " ++ show v
+        return $ If_icmpgt (fromIntegral v :: Int)
+    | op == 0xa4 = do
+        v <- readInt16
+        return $ If_icmple (fromIntegral v :: Int)
+    | op == 0xa5 = do
+        v <- readInt16
+        return $ If_acmpeq (fromIntegral v :: Int)
+    | op == 0xa6 = do
+        v <- readInt16
+        return $ If_acmpne (fromIntegral v :: Int)
     -- (Control)
-    -- | op == 0xa7 = return Goto              -- todo
+    | op == 0xa7 = do
+        v <- readInt16
+        return $ Goto (fromIntegral v :: Int)
 	-- | op == 0xa8 = Jsr            --
     -- | op == 0xa9 = Ret            --
-	-- | op == 0xaa = return Table_switch      -- todo
-    -- | op == 0xab = return Lookup_switch     -- todo
+	| op == 0xaa = return Table_switch      -- todo
+    | op == 0xab = return Lookup_switch     -- todo
 	-- | op == 0xac = Ireturn
     -- | op == 0xad = Lreturn
 	-- | op == 0xae = Freturn
@@ -273,7 +314,9 @@ newInstruction op
 	-- | op == 0xc5 = Multi_anew_array   
 	-- | op == 0xc6 = Ifnull                -- todo
 	-- | op == 0xc7 = Ifnonnull             -- todo
-    -- | op == 0xc8 = Goto_w                -- todo 
+    | op == 0xc8 = do
+        v <- readInt32
+        return $ Goto_w (fromIntegral v :: Int)
     -- | op == 0xc9 = Jsr_w              
  
     -- (Reservet)
@@ -282,11 +325,11 @@ newInstruction op
 	-- | op == 0xff = Impdep2
     | otherwise = error $ "UnSupport OpCode: " ++ show op
 
-executeInstruction :: Instruction -> StateT JvmStackFrame IO ()
-executeInstruction inst =
+executeInstruction :: Instruction -> Int -> StateT JvmStackFrame IO ()
+executeInstruction inst currentPc =
     case inst of
         Nop              -> return ()
-        Aconst_null      -> pushReference NULL
+        Aconst_null      -> pushReference NULL          -- ^ Push @null@
         Iconst_m1        -> pushInt (-1)
         Iconst_0         -> pushInt 0
         Iconst_1         -> pushInt 1
@@ -301,8 +344,8 @@ executeInstruction inst =
         Fconst_2         -> pushFloat 2.0
         Dconst_0         -> pushDouble 0.0
         Dconst_1         -> pushDouble 1.0
-        Bipush b         -> pushInt $ (fromIntegral b :: Int32)
-        Sipush s         -> pushInt $ (fromIntegral s :: Int32)
+        Bipush b         -> pushInt (fromIntegral b :: Int32) -- ^ Push byte
+        Sipush s         -> pushInt (fromIntegral s :: Int32) -- ^ Push short
 	    -- Ldc              -> return ()
 	    -- Ldc_w            -> return ()
         -- Ldc2_w           -> return ()
@@ -684,15 +727,15 @@ executeInstruction inst =
         Iand          -> do              -- ^ Boolean AND @int@
             v1 <- popInt
             v2 <- popInt
-            pushInt $ (v2 .&. v1)
+            pushInt (v2 .&. v1)
         Land          -> do              -- ^ Boolean AND @long@
             v1 <- popLong
             v2 <- popLong
-            pushLong $ (v2 .&. v1)
+            pushLong (v2 .&. v1)
         Ior           -> do              -- ^ Boolean OR @int@ 
             v1 <- popInt
             v2 <- popInt
-            pushInt $ (v2 .|. v1) 
+            pushInt (v2 .|. v1) 
         Lor           -> do              -- ^ Boolean OR @long@
             v1 <- popLong
             v2 <- popLong
@@ -700,7 +743,7 @@ executeInstruction inst =
         Ixor          -> do              -- ^ Boolean XOR @int@
             v1 <- popInt
             v2 <- popInt
-            pushInt $ (v1 `xor` v2) 
+            pushInt (v1 `xor` v2) 
         Lxor          -> do              -- ^ Boolean XOR @long@
             v1 <- popLong
             v2 <- popLong
@@ -775,31 +818,84 @@ executeInstruction inst =
         Lcmp          -> do         -- ^ (Comparisons) Compare @long@
             v1 <- popLong
             v2 <- popLong
-            let v = compareValue v2 v1
+            let v = compareLong v1 v2
             pushInt v
-	    -- Fcmpl          -> do
-	    -- Fcmpg          -> do
-	    -- Dcmpl          -> do
-	    -- Dcmpg          -> do
-	    -- Ifeq i          -> do
-	    -- Ifne i          -> do
-	    -- Iflt i          -> do
-	    -- Ifge i          -> do
-	    -- Ifgt i          -> do
-	    -- Ifle i          -> do
-	    -- If_icmpeq i          -> do
-	    -- If_icmpne i          -> do
-	    -- If_icmplt i          -> do
-	    -- If_icmpge i          -> do
-	    -- If_icmpgt i          -> do
-	    -- If_icmple i          -> do
-	    -- If_acmpeq i          -> do
-        -- If_acmpne i          -> do
-        -- Goto i           -> do           -- (Control)
+        Fcmpl          -> do                         -- ^ Compare @float@ (@<@ if @NaN@)
+            f1 <- popFloat
+            f2 <- popFloat
+            let v = compareFractional f1 f2 False
+            pushInt v
+        Fcmpg          -> do                        -- ^ Compare @float@ (@>@ if @NaN@)
+            f1 <- popFloat
+            f2 <- popFloat
+            let v = compareFractional f1 f2 True
+            pushInt v
+        Dcmpl          -> do                        -- ^ Compare @double@ (@<@ if @NaN@)
+            f1 <- popDouble
+            f2 <- popDouble
+            let v = compareFractional f1 f2 False
+            pushInt v
+        Dcmpg          -> do                        -- ^ Compare @double@ (@>@ if @NaN@)
+            f1 <- popDouble
+            f2 <- popDouble
+            let v = compareFractional f1 f2 True
+            pushInt v
+        Ifeq pc          -> do                       -- ^ Branch if @int@ equal to zero
+            v <- popInt
+            if v == 0 then setNextPc $ pc + currentPc else return ()
+        Ifne pc          -> do                      -- ^ Branch if @int@ not equal to zero
+            v <- popInt
+            if v /= 0 then setNextPc $ pc + currentPc else return ()
+        Iflt pc          -> do                      -- ^ Branch if @int@ less than zero
+            v <- popInt
+            if v < 0 then setNextPc $ pc + currentPc else return ()
+        Ifge pc          -> do                      -- ^ Branch if @int@ greater than or equal to zero
+            v <- popInt
+            if v >= 0 then setNextPc $ pc + currentPc else return ()
+        Ifgt pc          -> do                      -- ^ Branch if @int@ greater than zero
+            v <- popInt
+            if v > 0 then setNextPc $ pc + currentPc else return ()
+        Ifle pc          -> do                      -- ^ Branch if @int@ less than or equal to zero
+            v <- popInt
+            if v <= 0 then setNextPc $ pc + currentPc else return ()
+        If_icmpeq pc          -> do                  -- ^ Branch if @int@ comparison is equal
+            v1 <- popInt
+            v2 <- popInt
+            if v2 == v1 then setNextPc $ pc + currentPc else return ()
+        If_icmpne pc          -> do                 -- ^ Branch if @int@ comparison is not equal
+            v1 <- popInt
+            v2 <- popInt
+            if v2 /= v1 then setNextPc $ pc + currentPc else return ()
+        If_icmplt pc          -> do                 -- ^ Branch if @int@ comparison is less than
+            v1 <- popInt
+            v2 <- popInt
+            if v2 < v1 then setNextPc $ pc + currentPc else return ()
+        If_icmpge pc          -> do                 -- ^ Branch if @int@ comparison is greater than or equal
+            v1 <- popInt
+            v2 <- popInt
+            if v2 >= v1 then setNextPc $ pc + currentPc else return ()
+        If_icmpgt pc          -> do                 -- ^ Branch if @int@ comparison is greater than
+            v1 <- popInt
+            v2 <- popInt
+            if v2 > v1 then setNextPc $ pc + currentPc else return ()
+        If_icmple pc          -> do                 -- ^ Branch if @int@ comparison is less than or equal
+            v1 <- popInt
+            v2 <- popInt
+            if v2 <= v1 then setNextPc $ pc + currentPc else return ()
+                
+        If_acmpeq pc          -> do
+           v1 <- popReference
+           v2 <- popReference
+           if v1 == v2 then setNextPc $ pc + currentPc else return ()
+        If_acmpne pc          -> do
+            v1 <- popReference
+            v2 <- popReference
+            if v1 /= v2 then setNextPc $ pc + currentPc else return ()
+        Goto pc           -> setNextPc $ pc + currentPc  -- ^(Control) Branch always     
 	--  Jsr            -> return ()
     --  Ret            -> return ()
 	    -- Table_switch i          -> do
-        -- Lookup_switch i          -> do
+        -- Lookup_switch i          -> do        -- ^ Access jump table by key match and jump
 	--  Ireturn       -> return ()
     --  Lreturn      -> return ()
 	--  Freturn      -> return ()
@@ -830,7 +926,7 @@ executeInstruction inst =
         Ifnull                          -> return ()
         
         Ifnonnull                       -> return ()
-        Goto_w                          -> return ()
+        Goto_w pc                        -> setNextPc $ pc + currentPc 
     -- Jsr_w                 -> return ()
 	-- Breakpoint   -> return ()   -- ^(Reservet)
 	-- Impdep1      -> return ()
@@ -854,8 +950,8 @@ data Instruction =
 	| Fconst_2
 	| Dconst_0
 	| Dconst_1
-	| Bipush Int8       --
-    | Sipush Int16       --
+	| Bipush Int8 
+    | Sipush Int16 
 	-- | Ldc        --
 	-- | Ldc_w      --
     -- | Ldc2_w     --
@@ -1005,24 +1101,24 @@ data Instruction =
 	| Fcmpg
 	| Dcmpl
 	| Dcmpg
-	| Ifeq              --
-	| Ifne              --
-	| Iflt              --
-	| Ifge              --
-	| Ifgt              --
-	| Ifle              --
-	| If_icmpeq         --
-	| If_icmpne         --
-	| If_icmplt         --
-	| If_icmpge         --
-	| If_icmpgt         --
-	| If_icmple         --
-	| If_acmpeq         --
-    | If_acmpne         --
+	| Ifeq PC
+	| Ifne PC
+	| Iflt PC
+	| Ifge PC
+	| Ifgt PC
+	| Ifle PC
+	| If_icmpeq PC
+	| If_icmpne PC
+	| If_icmplt PC        
+	| If_icmpge PC        
+	| If_icmpgt PC         
+	| If_icmple PC        
+	| If_acmpeq PC      
+    | If_acmpne PC       
     
 
     -- (Control)
-    | Goto              --
+    | Goto PC                   
 	-- | Jsr            --
     -- | Ret            --
 	| Table_switch      --
@@ -1059,12 +1155,12 @@ data Instruction =
 	-- | Multi_anew_array   --
 	| Ifnull                --
 	| Ifnonnull             --
-    | Goto_w                --
+    | Goto_w PC
     -- | Jsr_w              --
  
     -- (Reservet)
 	-- | Breakpoint
 	-- | Impdep1
     -- | Impdep2
-    
+    deriving (Show)
 

@@ -17,6 +17,7 @@ import Runtime.Thread.JvmStack
 import Runtime.Thread.JvmStackFrame
 import Runtime.Thread.LocalVariableTable
 import Runtime.Thread.OperandStack
+import Instructions.Interpreter
 
 main :: IO ()
 main = dispatch =<< execParser opts
@@ -41,14 +42,25 @@ startJVM c = do
     let classFile = runGet parserClass classContent
     print "--------------Print Parser ClassFile--------------"
     printClassFile classFile
-    let thread = newJvmThread 4
-    print "============================="
-    runStateT testThread thread >> return ()
+    print "--------------find main method--------------"
+    let main = findMainMethod classFile
+    print main
+    print "--------------exec interpreter--------------"
+    interpreter main
+    -- let thread = newJvmThread 4
+    -- print "============test testLocalVariableTable testOperandStack================="
+    -- runStateT testThread thread >> return ()
 
-    let jvmStackFrame = newJvmStackFrame 10 10
-    runStateT testLocalVariableTable jvmStackFrame
-    runStateT testOperandStack jvmStackFrame
+    -- let jvmStackFrame = newJvmStackFrame 10 10
+    -- runStateT testLocalVariableTable jvmStackFrame
+    -- runStateT testOperandStack jvmStackFrame
+
     return ()
+
+findMainMethod :: ClassFile -> MemberInfo
+findMainMethod cf = (find cf) !! 0
+    where 
+        find = filter (\m -> (memName m == "main") && (memDesc m == "([Ljava/lang/String;)V")) . methods
 
 printClassFile :: ClassFile -> IO ()
 printClassFile cf = do

@@ -20,12 +20,12 @@ import Data.Int
 data BytecodeReader = BytecodeReader {
     bpc :: Int,
     bcode :: [Word8]
-}
+} deriving (Show)
 
 type OpCode = Word8
 
-readOpCode :: BytecodeReader -> IO OpCode
-readOpCode = evalStateT readUint8
+readOpCode :: StateT BytecodeReader IO OpCode
+readOpCode = readUint8
 
 readUint8 :: StateT BytecodeReader IO Word8
 readUint8 = do
@@ -33,6 +33,7 @@ readUint8 = do
    let codes = bcode br
    let i = bpc br
    modify (\o -> o {bpc = i + 1})
+   -- lift $ print $ "readUint8--------: i=" ++ show i ++ ",v=" ++ (show $ codes !! i)
    return $ codes !! i
 
 readInt8 :: StateT BytecodeReader IO Int8
@@ -45,7 +46,7 @@ readUint16 = do
    high <- readUint8
    low <- readUint8
    let whigh = (fromIntegral high :: Word16) `shiftL` 8
-   let wlow = fromIntegral high :: Word16
+   let wlow = fromIntegral low :: Word16
    let value = (.|.) whigh wlow
    return value
 

@@ -155,5 +155,5 @@ getInterfaceName c xs = map (`getUtf8` c) xs
 
 test :: L.ByteString -> Bool
 test c 
-    | True = error $ (cs c :: String)
-    |otherwise = error $ (cs c :: String)
+    | True = error (cs c :: String)
+    | otherwise = error (cs c :: String)

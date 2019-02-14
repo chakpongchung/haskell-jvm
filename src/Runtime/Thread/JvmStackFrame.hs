@@ -23,7 +23,9 @@ module Runtime.Thread.JvmStackFrame (
     getFloat,
     getLong,
     getDouble,
-    getReference
+    getReference,
+
+    setNextPc
 ) where
 
 import Runtime.Thread.LocalVariableTable
@@ -53,11 +55,15 @@ newJvmStackFrame t s = JvmStackFrame {
     nextPC = 0
 }
 
+setNextPc :: Int -> StateT JvmStackFrame IO ()
+setNextPc pc = modify(\o -> o{nextPC = pc})
+
 setValue :: Index -> VType -> StateT JvmStackFrame IO ()
 setValue i t = do
     jsf <- get
     let lvt = localtable jsf
-    guard (checkMaxNum (maxNum lvt) 1 (Map.size $ slot lvt))
+    -- guard (checkMaxNum (maxNum lvt) 1 (Map.size $ slot lvt))
+    -- lift $ print $ "set-int=============: " ++ show i ++ ":" ++ show t
     let lvt' = LocalVariableTable {maxNum = maxNum lvt,slot = Map.insert i t $ slot lvt}
     modify(\o -> o{localtable = lvt'})
 
@@ -128,10 +134,15 @@ getReference i = do
 pushValue :: VType -> StateT JvmStackFrame IO ()
 pushValue v = do
     jsf <- get
+    -- lift $ print $ "add-current-jsf1: " ++ show jsf
     let stack = operandStack jsf
     guard (checkMaxNum (omaxNum stack) 1 (L.length $ oslot stack))
-    let stack' = OperandStack {omaxNum = omaxNum stack,oslot = oslot stack ++ v : [],otop = otop stack + 1}
+    let n = otop stack
+    -- let stack' = OperandStack {omaxNum = omaxNum stack,oslot = oslot stack ++ v : [],otop = n + 1}
+    let stack' = OperandStack {omaxNum = omaxNum stack,oslot = v : oslot stack,otop = n + 1}
     modify(\o -> o {operandStack = stack'})
+    -- jsf' <- get
+    -- lift $ print $ "add-current-jsf2: " ++ show jsf'
 
 pushInt :: Int32 -> StateT JvmStackFrame IO ()
 pushInt = pushValue . VInt
@@ -160,14 +171,19 @@ pushReference v = pushValue $ VRef v
 popValue :: StateT JvmStackFrame IO VType
 popValue = do
     jsf <- get
+    -- lift $ print $ "current-jsf: " ++ show jsf
     let stack = operandStack jsf
-    let i = otop stack
-    let x = (oslot stack) !! (i - 1)
-    guard (checkSlot (oslot stack) (i - 1))
+    -- guard (checkSlot (oslot stack) (i - 1))
+    let (x,xs) = case oslot stack of
+            (a:[]) -> (a,[])
+            (a:xa) -> (a,xa)
+
     -- let (x:xs) = oslot stack
-    -- let stack' = OperandStack {omaxNum = omaxNum stack,oslot = xs,otop = otop stack - 1}
-    let stack' = OperandStack {omaxNum = omaxNum stack,otop = otop stack - 1,oslot = oslot stack}
+    -- lift $ print $ "pop^value: " ++ show x ++ ",stack: " ++ (show $ oslot stack) 
+    let stack' = OperandStack {omaxNum = omaxNum stack,oslot = xs,otop = otop stack - 1}
+    -- let stack' = OperandStack {omaxNum = omaxNum stack,otop = i - 1,oslot = oslot stack}
     modify(\o -> o {operandStack = stack'})
+   
     return x
 
 popInt :: StateT JvmStackFrame IO Int32
@@ -203,7 +219,7 @@ popReference = do
 
 checkMaxNum :: Word16 -> Int -> Int -> Bool
 checkMaxNum m n c
-    | c + n > max = error "StackOverflow..."
+    -- | c + n > max = error "StackOverflow..."
     | max < 0 = error "stack error..."
     | otherwise = True
     where max = fromIntegral m :: Int
@@ -211,7 +227,7 @@ checkMaxNum m n c
 
 checkSlot :: [VType] -> Index -> Bool
 checkSlot dt i
-    | L.null dt = error "Stack is null"
+    | L.null dt = error $ "Stack is null: " ++ show i
     | L.length dt < i = error "Stack IndexOutOfBoundsException"
     | i < 0 = error "Stack Index Error"
     | otherwise = True

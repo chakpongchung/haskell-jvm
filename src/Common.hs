@@ -31,9 +31,9 @@ data Slot = IntT Int32 | FloatT Float | LongT Int64 | DoubleT Double| ReferenceT
 
 data Object = NULL | Object {
     name :: String
-} deriving (Show)
+} deriving (Show,Eq)
 
-data VType = VInt Int32 | VRef Object deriving (Show)
+data VType = VInt Int32 | VRef Object deriving (Show,Eq)
 
 
 
