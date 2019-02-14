@@ -1,7 +1,6 @@
 # haskell-jvm
 
-
-使用Haskell实现的简易JVM，遵循[Java虚拟机规范](https://docs.oracle.com/javase/specs/jvms/se8/html/index.html)，部分代码在[IRC](https://webchat.freenode.net/#haskell-beginners)频道上被大牛review过，后面新增的代码抽时间也会让他们持续review，因此无论是学习FP语言还是深入学习虚拟机都会有所收获。
+使用Haskell实现的简易JVM,遵循[Java虚拟机规范](https://docs.oracle.com/javase/specs/jvms/se8/html/index.html)，部分代码在[IRC](https://webchat.freenode.net/#haskell-beginners)频道上被大牛review过，后面新增的代码抽时间也会让他们持续review，因此无论是学习FP语言还是深入学习虚拟机都会有所收获。
 
 *命令行解析器:*
 ![image](images/1.png)
