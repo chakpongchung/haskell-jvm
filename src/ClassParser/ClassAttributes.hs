@@ -4,6 +4,7 @@ module ClassParser.ClassAttributes(
     readAttributes
     ,AttributeInfo(..)
     ,findCodeAttribute
+    ,findCodeAttribute'
 ) where
 
 import Common
@@ -137,6 +138,12 @@ findCodeAttribute :: [AttributeInfo] -> AttributeInfo
 findCodeAttribute [] = error "not found CodeAttribute"
 findCodeAttribute (x:xs) = case x of 
                             CodeAttribute {} -> x
+                            _   -> findCodeAttribute xs
+
+findCodeAttribute' :: [AttributeInfo] -> Maybe AttributeInfo
+findCodeAttribute' [] = Nothing
+findCodeAttribute' (x:xs) = case x of 
+                            CodeAttribute {} -> Just x
                             _   -> findCodeAttribute xs
 
 unKnow :: AttributeName -> AttributeLens -> Bool

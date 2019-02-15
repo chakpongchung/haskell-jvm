@@ -30,6 +30,7 @@ module Runtime.Thread.JvmStackFrame (
 
 import Runtime.Thread.LocalVariableTable
 import Runtime.Thread.OperandStack
+import Runtime.Heap.Object
 import Common
 import Data.Word
 import Data.Int

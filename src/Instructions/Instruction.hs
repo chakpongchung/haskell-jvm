@@ -12,6 +12,7 @@ import Runtime.Thread.JvmStackFrame
 import Common
 import Control.Monad.State.Lazy
 import Data.Binary.IEEE754
+import Runtime.Heap.Object
 
 type Const = Int32
 
