@@ -140,6 +140,9 @@ getUtf8 i c =
     where 
         constantInfo = getConstantInfo i c
 
+-- TODO constantNameAndType
+
+
 getConstantInfo :: PoolIndex -> ConstantPool -> ConstantInfo
 getConstantInfo i c = 
     if index >= clen 
