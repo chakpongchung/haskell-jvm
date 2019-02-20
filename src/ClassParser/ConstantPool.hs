@@ -5,6 +5,7 @@ module ClassParser.ConstantPool (
     ,Tag
     ,getUtf8
     ,getInterfaceName
+    ,getNameAndDesc
 ) where
 
 import Data.Binary.Get
@@ -132,15 +133,18 @@ padding t
 
 getUtf8 :: PoolIndex -> ConstantPool -> String
 getUtf8 i c = 
-    case constantInfo of
+    case constantInfo i c of
         ConstantUtf8Info str -> str
         -- read (this/super)class name
         ConstantClassInfo nameIndex -> getUtf8 nameIndex c
-        _  -> error "type error, index: " ++ show i ++ show constantInfo
-    where 
-        constantInfo = getConstantInfo i c
+        _  -> error "type error, index: " ++ show i
 
--- TODO constantNameAndType
+-- 获取名称和描述符        
+getNameAndDesc :: PoolIndex -> ConstantPool -> (String,String)
+getNameAndDesc i c = 
+    case constantInfo i c of
+        ConstantNameAndType nameIndex descIndex -> (getUtf8 nameIndex c,getUtf8 descIndex c)
+        _  -> error "type error, index: " ++ show i                             
 
 
 getConstantInfo :: PoolIndex -> ConstantPool -> ConstantInfo

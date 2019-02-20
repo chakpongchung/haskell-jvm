@@ -28,6 +28,33 @@ data Constant = JInt Int32 | JFloat Float | JLong Int64 | JDouble Double
     | JMethod
     | JInterface
 
+-- 类符号引用
+data ClassSymbolRef = ClassSymbolRef {
+    className :: String
+    -- constantPool :: RuntimeConstantPool,
+    -- javaClass :: JavaClass
+}
+
+data MemberSymbolRef = 
+    FieldSymbolRef {                -- ^ 字段符号引用
+        fClassName :: String,
+        fName :: String,            -- ^ java虚拟机允许同一个类中出现多个同名字段，只要字段类型不同就行，而java语言规范则不允许
+        fDesc :: String
+        -- field :: Field
+    } 
+    | MethodSymbolRef {             -- ^ 方法符号引用
+        mClassName :: String,
+        mName :: String,
+        mDesc :: String
+        -- method :: Method
+    }
+    | InterfaceMethodSymbolRef {    -- ^ 接口方法符号引用
+        iClassName :: String,
+        iName :: String,
+        iDesc :: String
+        -- method :: Method
+    }
+
 -- 运行时常量池
 data RuntimeConstantPool = RuntimeConstantPool {
     javaClass :: JavaClass,
@@ -64,9 +91,36 @@ newRuntimeConstant ci pool =
         ConstantLongInfo l -> JLong l
         ConstantStringInfo index -> JString (getUtf8 index pool)
 
--- TODO 创建类符号引用        
--- newClassRefInfo ::         
+-- 创建类符号引用        
+newClassSymbolRef :: ConstantInfo -> ConstantPool -> ClassSymbolRef
+newClassSymbolRef (ConstantClassInfo nameIndex) c = ClassSymbolRef {
+    className = getUtf8 nameIndex c
+} 
 
+-- 创建符号引用
+newMemberSymbolRef :: ConstantInfo -> ConstantPool -> MemberSymbolRef
+newMemberSymbolRef c p = 
+    case c of
+        ConstantFieldRefInfo classIndex nameAndTypeIndex    -> 
+            FieldSymbolRef {
+                fClassName = getUtf8 classIndex p,
+                fName = fieldName,
+                fDesc = fieldDesc
+            }
+        ConstantMethodRefInfo classIndex nameAndTypeIndex   ->
+            MethodSymbolRef {
+                mClassName = getUtf8 classIndex p,
+                mName = fieldName,
+                mDesc = fieldDesc
+            }    
+        ConstantInterfaceMethodRefInfo classIndex nameAndTypeIndex ->
+            InterfaceMethodSymbolRef {
+                iClassName = getUtf8 classIndex p,
+                iName = fieldName,
+                iDesc = fieldDesc
+            }
+    where 
+        (fieldName,fieldDesc) = getNameAndDesc nameAndTypeIndex p
 
 -- 根据索引从常量池中查询常量
 getConstantByIndex :: ConstantPoolIndex -> RuntimeConstantPool -> Constant

@@ -1,6 +1,7 @@
 module Runtime.Heap.JavaClass (
     JavaClass(..),
-    newJavaClass,
+    Filed(..),
+    newJavaClass
 ) where
 
 import Data.Word
@@ -9,6 +10,7 @@ import ClassParser.ClassReader
 import ClassParser.ClassMember
 import ClassParser.ConstantPool
 import ClassParser.ClassAttributes
+import Runtime.Head.ClassLoader
 import qualified Data.ByteString as L
 
 -- java类信息/字段信息/方法信息等将会保存到方法区
@@ -43,8 +45,8 @@ data Method = Method {
     _code :: L.ByteString       -- ^ 方法字节码
 }
 
-newJavaClass :: ClassFile -> JavaClass
-newJavaClass cf = 
+newJavaClass :: ClassFile -> ClassLoader -> JavaClass
+newJavaClass cf cl = 
     JavaClass {
         _accessFlag = accessFlags cf,
         _thisClassName = thisClassName cf,
@@ -52,7 +54,7 @@ newJavaClass cf =
         _interfaceNames = interNames cf,
         _fields = newFields $ fields cf,
         _methods = newMethods $ methods cf,
-        _classLoader = newClassLoader,
+        _classLoader = cl,
         -- _superClass :: JavaClass,
         -- _interfaces :: [JavaClass],
         -- _instanceSlotCount :: Word,
